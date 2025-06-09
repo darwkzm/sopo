@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newell's Hub</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
+</head>
+<body>
+    <div id="loader" class="loader-container show">
+        <div class="loader-spinner"></div>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <h1>NEWELL'S HUB</h1>
+            <p>El centro de operaciones de tu equipo</p>
+        </header>
+
+        <main class="main-content">
+            <section class="leaderboard-card" id="leaderboardCard">
+                <h2>🏆 Tabla de Goleadores</h2>
+                <div id="leaderboardContent">
+                    </div>
+            </section>
+            
+            <section class="card">
+                <h2>Plantel del Equipo</h2>
+                <div class="players-grid" id="playersGrid">
+                    </div>
+            </section>
+            
+            <section class="card selection-card hidden" id="selectionCard">
+                <h3>Hola, <span id="selectedPlayerName"></span>.</h3>
+                <p>Elige tu número de camiseta para la temporada.</p>
+                <div class="number-buttons">
+                    <button class="number-btn" id="currentNumberBtn">Mantener mi número</button>
+                    <button class="number-btn" id="customNumberBtn">Elegir otro número</button>
+                </div>
+                <div class="custom-number hidden" id="customNumberDiv">
+                    <input type="number" id="customNumberInput" placeholder="Ingresa un número (1-99)" min="1" max="99">
+                </div>
+                <button class="submit-btn" id="submitSelection">Confirmar Selección</button>
+            </section>
+
+            <section class="card">
+                <div class="not-listed">
+                    <h3>¿Eres nuevo en el equipo y no estás en la lista?</h3>
+                    <button class="submit-btn secondary" id="showApplicationForm">Postúlate aquí</button>
+                    
+                    <form class="application-form hidden" id="applicationForm">
+                        <h4>Formulario de Postulación</h4>
+                        <div class="form-group">
+                            <label for="applicantName">Nombre completo:</label>
+                            <input type="text" id="applicantName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="applicantPosition">Posición en la cancha:</label>
+                            <input type="text" id="applicantPosition" placeholder="Ej: Delantero, Defensa, etc.">
+                        </div>
+                        <button class="submit-btn" type="submit">Enviar Solicitud</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="staff-panel-container">
+        <button class="staff-btn" id="staffBtn" aria-label="Abrir panel de staff">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </button>
+    </div>
+
+    <div class="modal" id="staffModal">
+        <div class="modal-content">
+            <button class="close-btn" id="closeStaffModal" aria-label="Cerrar modal">&times;</button>
+            
+            <div id="staffLogin">
+                <h2>Acceso Staff</h2>
+                <form id="staffLoginForm">
+                    <div class="form-group">
+                        <label for="staffUser">Usuario:</label>
+                        <input type="text" id="staffUser">
+                    </div>
+                    <div class="form-group">
+                        <label for="staffPass">Contraseña:</label>
+                        <input type="password" id="staffPass">
+                    </div>
+                    <button class="submit-btn" type="submit">Iniciar Sesión</button>
+                </form>
+            </div>
+            
+            <div id="staffAdminPanel" class="hidden">
+                <h2>Panel de Administración</h2>
+                <div class="staff-dashboard" id="staffDashboard">
+                    </div>
+                <div class="staff-tabs">
+                    <button class="tab-btn active" data-tab="players">Jugadores</button>
+                    <button class="tab-btn" data-tab="applications">Solicitudes</button>
+                    <button class="tab-btn" data-tab="selections">Registros</button>
+                </div>
+                <div class="staff-content" id="staffContent">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container"></div>
+    <script src="script.js"></script>
+</body>
+</html>
