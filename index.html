@@ -16,41 +16,29 @@
     </div>
     <div class="background-texture"></div>
 
-    <div class="main-container">
+    <div class="main-container hidden" id="mainContainer">
         <header class="main-header">
             <h1>NEWELL'S HUB</h1>
             <p>EDICIÓN DEFINITIVA</p>
         </header>
 
-        <div class="players-grid" id="playersGrid">
-            </div>
-
+        <div class="players-grid" id="playersGrid"></div>
         <section class="summary-table-container">
             <h2>Resumen del Plantel y Goleadores</h2>
             <div class="summary-table" id="summaryTable">
                 <div class="summary-header">
-                    <div>Jugador</div>
-                    <div>Posición</div>
-                    <div>Skill</div>
-                    <div>Goles</div>
-                    <div>N° Actual</div>
-                    <div>N° Nuevo</div>
+                    <div>Jugador</div><div>Posición</div><div>Skill</div><div>Goles</div><div>N° Actual</div><div>N° Nuevo</div>
                 </div>
-                <div class="summary-body" id="summaryBody">
-                    </div>
+                <div class="summary-body" id="summaryBody"></div>
             </div>
         </section>
-        
-        <footer class="main-footer" id="mainFooter">
-            </footer>
+        <footer class="main-footer" id="mainFooter"></footer>
     </div>
     
     <div id="modal-container"></div>
-    
     <button class="floating-btn" id="staffBtn" aria-label="Abrir panel de staff">
         <svg fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path></svg>
     </button>
-    
     <div id="notification-container"></div>
     <script src="script.js" type="module"></script>
 </body>
