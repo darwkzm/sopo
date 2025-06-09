@@ -53,17 +53,9 @@ async function saveDb(data) {
 }
 
 function getInitialData() {
-  return {
-    players: [
-        { id: 1, name: 'Saul', number: 5, goals: 0 }, { id: 2, name: 'Enrique', number: 11, goals: 0 },
-        { id: 3, name: 'Eleonor', number: 10, goals: 0 }, { id: 4, name: 'Masias', number: 4, goals: 0 },
-        { id: 5, name: 'Angel Cueto', number: 77, goals: 0 }, { id: 6, name: 'Pineda', number: 9, goals: 0 },
-        { id: 7, name: 'Kevin', number: null, goals: 0 }, { id: 8, name: 'Brandito', number: 47, goals: 0 },
-        { id: 9, name: 'Iam', number: 20, goals: 0 }, { id: 10, name: 'Jeshua', number: 1, goals: 0 },
-        { id: 11, name: 'Oliver', number: 8, goals: 0 }, { id: 12, name: 'Roger', number: null, goals: 0 },
-        { id: 13, name: 'Sinue', number: null, goals: 0 }
-    ],
-    applications: [],
-    selections: [],
-  };
-}
+  const players = [
+    { id: 1, name: 'Saul', number: 5 }, { id: 2, name: 'Enrique', number: 11 },
+    { id: 3, name: 'Eleonor', number: 10 }, { id: 4, name: 'Masias', number: 4 },
+    { id: 5, name: 'Angel Cueto', number: 77 }, { id: 6, name: 'Pineda', number: 9 },
+    { id: 7, name: 'Kevin', number: null }, { id: 8, name: 'Brandito', number: 47 },
+    { id: 9, name: 'Iam', number: 20
