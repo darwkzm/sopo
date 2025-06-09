@@ -135,7 +135,28 @@ const App = {
     getSelectHTML(id, options, selectedValue = '') { return `<select id="${id}">${options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`).join('')}</select>`; },
     renderModal(contentHTML, isLarge = false, customClass = '') { this.elements.modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content ${isLarge ? 'large' : ''} ${customClass}"><button class="close-btn">&times;</button>${contentHTML}</div></div>`; const overlay = this.elements.modalContainer.querySelector('.modal-overlay'); setTimeout(() => overlay.classList.add('show'), 10); overlay.addEventListener('click', e => { if (e.target === overlay || e.target.closest('.close-btn')) this.closeModal(); }); },
     closeModal() { const overlay = this.elements.modalContainer.querySelector('.modal-overlay'); if (overlay) { overlay.classList.remove('show'); overlay.addEventListener('transitionend', () => overlay.remove(), { once: true }); } },
-    showNotification(message, type = 'info') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = message; this.elements.notificationContainer.appendChild(el); setTimeout(() => { el.style.opacity = '0'; el.addEventListener('transitionend', () => el.remove()); }, 4000); },
+    showNotification(message, type = 'info') {
+    const container = this.elements.notificationContainer;
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+
+    const dismiss = () => {
+        if (!notification.parentElement) return; // Evitar errores si ya se quitó
+        notification.classList.add('hiding');
+        // Quitar del DOM después de que la animación de salida termine
+        notification.addEventListener('transitionend', () => notification.remove(), { once: true });
+    };
+
+    // Cerrar al hacer clic
+    notification.addEventListener('click', dismiss);
+
+    // Cerrar automáticamente después de 2 minutos (120000 ms)
+    setTimeout(dismiss, 120000);
+
+    container.appendChild(notification);
+},
+
     setCookie(name, value, days) { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days*24*60*60*1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/"; },
     getCookie(name) { const nameEQ = name + "="; const ca = document.cookie.split(';'); for(let i=0;i < ca.length;i++) { let c = ca[i]; while (c.charAt(0)==' ') c = c.substring(1,c.length); if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length); } return null; },
     eraseCookie(name) { document.cookie = name+'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; }
