@@ -1,3 +1,4 @@
+// script.js (Versión Definitiva, Corregida y Completa)
 const App = {
     db: { players: [], applications: [] },
     state: { loggedInPlayerId: null, isSpectator: false },
@@ -14,25 +15,26 @@ const App = {
         this.cacheElements();
         this.setupEventListeners();
         try {
-            this.db = await this.fetchData('/api/data', 15000);
+            this.showNotification('Cargando datos del equipo...', 'info');
+            this.db = await this.fetchData('/api/data', 15000); 
             this.checkSession();
         } catch (error) {
             this.showNotification(error.message, 'error');
             this.elements.loader.innerHTML = `<p style="color: var(--text-secondary);">${error.message}</p>`;
         } finally {
-            setTimeout(() => this.elements.loader.classList.remove('show'), 500);
+            setTimeout(() => this.elements.loader.classList.remove('show'), 2000);
         }
     },
 
     cacheElements() {
         this.elements = {
             loader: document.getElementById('loader'),
-            roleSelectionScreen: document.getElementById('role-selection-screen'),
-            mainContainer: document.getElementById('mainContainer'),
+            mainContainer: document.querySelector('.main-container'),
             playersGrid: document.getElementById('playersGrid'),
             summaryBody: document.getElementById('summaryBody'),
             modalContainer: document.getElementById('modal-container'),
             staffBtn: document.getElementById('staffBtn'),
+            roleSelectionScreen: document.getElementById('role-selection-screen'),
             notificationContainer: document.getElementById('notification-container'),
             mainTitle: document.getElementById('main-title'),
             mainSubtitle: document.getElementById('main-subtitle'),
@@ -51,13 +53,11 @@ const App = {
         document.body.addEventListener('click', e => {
             const actionBtn = e.target.closest('[data-action]');
             if (!actionBtn) return;
-            
             const action = actionBtn.dataset.action;
             const id = actionBtn.dataset.id;
-
             const actions = {
-                logout: () => this.logout(),
                 showApplication: () => this.openApplicationModal(),
+                logout: () => this.logout(),
                 logoutStaff: () => this.openStaffLoginModal(),
                 addPlayer: () => this.openEditPlayerModal(null),
                 editPlayer: () => this.openEditPlayerModal(id),
@@ -70,11 +70,7 @@ const App = {
         this.elements.playersGrid.addEventListener('click', e => {
             const card = e.target.closest('.fifa-card');
             if (!card) return;
-
-            if (this.state.isSpectator) {
-                return this.showNotification('Estás en modo espectador. No puedes editar.', 'info');
-            }
-            
+            if (this.state.isSpectator) return this.showNotification('Estás en modo espectador. No puedes editar.', 'info');
             const clickedPlayerId = parseInt(card.dataset.playerId);
             if (clickedPlayerId === this.state.loggedInPlayerId) {
                 if (!card.classList.contains('is-expelled')) this.openPlayerActionModal(clickedPlayerId);
@@ -141,7 +137,9 @@ const App = {
         this.renderPlayerCards();
         this.renderSummaryTable();
         this.renderFooter(); 
-        if (document.querySelector('.staff-modal')) this.openStaffPanel(false);
+        if (document.querySelector('.staff-modal')) {
+            this.openStaffPanel(false);
+        }
     },
     
     renderPlayerCards() { this.elements.playersGrid.innerHTML = this.db.players.map(p => this.getPlayerCardHTML(p)).join(''); },
@@ -149,17 +147,12 @@ const App = {
     getPlayerCardHTML(player) {
         const { id, name, position, skill, number_current, number_new, isExpelled } = player;
         const isCurrentUser = id === this.state.loggedInPlayerId;
-        const numberDisplay = number_new
-            ? `#${number_current || '--'} <span class="new-number-tag">(Nuevo: ${number_new})</span>`
-            : `#${number_current || '--'}`;
-
+        const numberDisplay = number_new ? `#${number_current || '--'} <span class="new-number-tag">(Nuevo: ${number_new})</span>` : `#${number_current || '--'}`;
         return `<div class="fifa-card ${isExpelled ? 'is-expelled' : ''} ${isCurrentUser ? 'is-current-user' : ''}" data-player-id="${id}"><div class="card-top"><span class="player-skill">${skill || 'N/A'}</span></div><div class="card-jersey-container">${this.icons.jersey}</div><div class="card-bottom"><h3 class="player-name">${name.toUpperCase()}</h3><p class="player-position">${position || 'Sin Posición'}</p><div class="player-numbers-display">${numberDisplay}</div></div>${isExpelled ? this.icons.redCard : ''}</div>`;
     },
 
     renderSummaryTable() {
-        this.elements.summaryBody.innerHTML = [...this.db.players]
-            .sort((a,b) => b.stats.goles - a.stats.goles)
-            .map(p => `<div class="summary-row"><div>${p.name}</div><div>${p.position || 'N/A'}</div><div>${p.skill || 'N/A'}</div><div class="goals">${p.stats.goles}</div><div>${p.number_current || '--'}</div><div>${p.number_new ? `<span class="new-number">${p.number_new}</span>` : '--'}</div></div>`).join('');
+        this.elements.summaryBody.innerHTML = [...this.db.players].sort((a,b) => b.stats.goles - a.stats.goles).map(p => `<div class="summary-row"><div>${p.name}</div><div>${p.position || 'N/A'}</div><div>${p.skill || 'N/A'}</div><div class="goals">${p.stats.goles}</div><div>${p.number_current || '--'}</div><div>${p.number_new ? `<span class="new-number">${p.number_new}</span>` : '--'}</div></div>`).join('');
     },
 
     renderFooter() {
@@ -169,12 +162,30 @@ const App = {
         footer.innerHTML = `<button class="action-btn" data-action="showApplication">¿Eres nuevo? Postúlate</button><button class="action-btn" data-action="logout">${buttonText}</button>`;
     },
     
+    openLoginModal() {
+        const playerOptions = this.db.players.sort((a, b) => a.name.localeCompare(b.name)).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        const content = `<h2>¿Quién Eres?</h2><p>Selecciona tu nombre para continuar.</p><form id="playerLoginForm"><div class="form-group"><label for="playerSelect">Selecciona tu Perfil</label><select id="playerSelect" required><option value="" disabled selected>-- Elige tu nombre --</option>${playerOptions}</select></div><div class="form-group"><label for="playerPass">Contraseña</label><input type="password" id="playerPass" required></div><button type="submit" class="submit-btn">Entrar</button></form>`;
+        this.renderModal(content, false, 'login-modal');
+        document.getElementById('playerLoginForm').addEventListener('submit', e => { 
+            e.preventDefault(); 
+            const selectedId = document.getElementById('playerSelect').value;
+            const password = document.getElementById('playerPass').value;
+            if (!selectedId) return this.showNotification('Debes seleccionar tu nombre.', 'error');
+            if (password === 'newells') {
+                this.startPlayerSession(parseInt(selectedId));
+                this.closeModal();
+            } else {
+                this.showNotification('Contraseña incorrecta.', 'error');
+            }
+        });
+    },
+    
     openPlayerActionModal(playerId) {
         const player = this.db.players.find(p => p.id === parseInt(playerId));
         const content = `<h2>${player.name.toUpperCase()}</h2><p>¿Qué deseas hacer?</p><div class="modal-options"><button class="option-btn" id="action-dorsal">Asignar Nuevo Dorsal</button><button class="option-btn" id="action-pos-skill">Actualizar Posición y Skill</button></div>`;
         this.renderModal(content);
-        this.elements.modalContainer.querySelector('#action-dorsal').addEventListener('click', () => this.openNumberSelectionModal(player));
-        this.elements.modalContainer.querySelector('#action-pos-skill').addEventListener('click', () => this.openPosSkillModal(player));
+        document.getElementById('action-dorsal').addEventListener('click', () => this.openNumberSelectionModal(player));
+        document.getElementById('action-pos-skill').addEventListener('click', () => this.openPosSkillModal(player));
     },
 
     openNumberSelectionModal(player) {
@@ -222,7 +233,7 @@ const App = {
     },
 
     renderStaffContent(tab) { const container = document.getElementById('staffContent'); if (tab === 'players') this.renderStaffPlayers(container); else this.renderStaffApplications(container); },
-    renderStaffPlayers(container) { container.innerHTML = `<div class="staff-list">${this.db.players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="staff-list-item" data-id="${p.id}"><div class="staff-player-info"><strong>${p.name}</strong><br><span>${p.position || 'N/A'} / #${p.number_current || '--'}</span></div><div class="staff-item-actions"><button class="action-btn-small" data-action="editPlayer" data-id="${p.id}">Editar</button></div></div>`).join('')}</div>`; },
+    renderStaffPlayers(container) { container.innerHTML = `<div class="staff-list">${this.db.players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="staff-list-item" data-player-id="${p.id}"><div class="staff-player-info"><strong>${p.name}</strong><br><span>${p.position || 'N/A'} / #${p.number_current || '--'}</span></div><div class="staff-item-actions"><button class="action-btn-small" data-action="editPlayer" data-id="${p.id}">Editar</button></div></div>`).join('')}</div>`; },
     renderStaffApplications(container) { if(this.db.applications.length === 0) { container.innerHTML = '<p style="padding: 1rem;">No hay solicitudes pendientes.</p>'; return; } container.innerHTML = `<div class="staff-list">${this.db.applications.map(app => `<div class="staff-list-item application"><div><strong>${app.name}</strong><br><span>${app.position} / #${app.number}</span></div><div class="staff-item-actions"><button class="action-btn-small approve" data-action="approveApplication" data-id="${app.id}">Aprobar</button><button class="action-btn-small reject" data-action="rejectApplication" data-id="${app.id}">Rechazar</button></div></div>`).join('')}</div>`; },
     
     async handleApplication(appId, isApproved) {
@@ -230,7 +241,6 @@ const App = {
         const originalApps = JSON.parse(JSON.stringify(this.db.applications));
         const appIndex = this.db.applications.findIndex(a => a.id === appId);
         if (appIndex === -1) return;
-        
         if (isApproved) {
             const app = this.db.applications[appIndex];
             if (this.isNumberTaken(app.number)) return this.showNotification('No se puede aprobar: El número ya está en uso.', 'error');
@@ -249,7 +259,6 @@ const App = {
         const player = isNew ? { stats: {}, isExpelled: false } : this.db.players.find(p => p.id === parseInt(playerId));
         const modalContent = `<h2>${isNew ? 'Añadir Nuevo Jugador' : 'Editar a ' + player.name}</h2><form id="editForm"><div class="form-grid"><div class="form-group"><label>Nombre</label><input id="name" value="${player.name || ''}" required></div><div class="form-group"><label>Posición</label>${this.getSelectHTML('position', this.POSITIONS, player.position)}</div><div class="form-group"><label>Skill</label>${this.getSelectHTML('skill', this.SKILLS, player.skill)}</div><div class="form-group"><label>N° Actual</label><input id="num_current" type="number" value="${player.number_current || ''}"></div><div class="form-group"><label>N° Nuevo</label><input id="num_new" type="number" value="${player.number_new || ''}"></div><div class="form-group"><label>Goles</label><input id="stat_goles" type="number" value="${player.stats?.goles || 0}"></div><div class="form-group"><label>Partidos</label><input id="stat_partidos" type="number" value="${player.stats?.partidos || 0}"></div><div class="form-group"><label>Asistencias</label><input id="stat_asistencias" type="number" value="${player.stats?.asistencias || 0}"></div></div><div class="form-group checkbox-group"><input id="isExpelled" type="checkbox" ${player.isExpelled ? 'checked' : ''}><label for="isExpelled">Marcar como Expulsado</label></div><button type="submit" class="submit-btn">${isNew ? 'Añadir al Plantel' : 'Guardar Cambios'}</button></form>`;
         this.renderModal(modalContent, true);
-
         document.getElementById('editForm').addEventListener('submit', e => {
             e.preventDefault();
             const num_current = parseInt(document.getElementById('num_current').value) || null;
@@ -268,9 +277,7 @@ const App = {
     },
     
     async addPlayer(playerData) { try { const { db } = await this.sendData('/api/data', 'POST', { type: 'new_player', payload: playerData }); this.db = db; this.renderAll(); this.showNotification('Jugador añadido.', 'success'); } catch (e) { this.showNotification(e.message, 'error'); } },
-    async updatePlayer(updatedPlayer) { const originalPlayers = JSON.parse(JSON.stringify(this.db.players)); const playerIndex = this.db.players.findIndex(p => p.id === updatedPlayer.id); if (playerIndex > -1) { this.db.players[playerIndex] = updatedPlayer; this.renderAll(); } try { await this.sendData('/api/data', 'PUT', { type: 'players', payload: this.db.players }); this.showNotification('Jugador actualizado.', 'success'); const item = document.querySelector(`.staff-list-item[data-id="${updatedPlayer.id}"]`); if (item) { item.classList.add('is-saving'); setTimeout(() => item.classList.remove('is-saving'), 800); } } catch(e) { this.showNotification('Error al guardar.', 'error'); this.db.players = originalPlayers; this.renderAll(); } },
-    
-    // --- Funciones de Utilidad ---
+    async updatePlayer(updatedPlayer) { const originalPlayers = JSON.parse(JSON.stringify(this.db.players)); const playerIndex = this.db.players.findIndex(p => p.id === updatedPlayer.id); if (playerIndex > -1) { this.db.players[playerIndex] = updatedPlayer; this.renderAll(); } try { const itemToFlash = document.querySelector(`.staff-list-item[data-player-id="${updatedPlayer.id}"]`); if (itemToFlash) { itemToFlash.classList.add('is-saving'); setTimeout(() => itemToFlash.classList.remove('is-saving'), 800); } await this.sendData('/api/data', 'PUT', { type: 'players', payload: this.db.players }); this.showNotification('Jugador actualizado.', 'success'); } catch(e) { this.showNotification('Error al guardar.', 'error'); this.db.players = originalPlayers; this.renderAll(); } },
     isNumberTaken(number, excludePlayerId = null) { if (number === null || number === 0 || isNaN(number)) return false; return this.db.players.some(p => { if (p.id === excludePlayerId) return false; return p.number_current === number || p.number_new === number; }); },
     getSelectHTML(id, options, selectedValue = '') { return `<select id="${id}">${options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`).join('')}</select>`; },
     renderModal(contentHTML, isLarge = false, customClass = '') { this.elements.modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content ${isLarge ? 'large' : ''} ${customClass}"><button class="close-btn">&times;</button>${contentHTML}</div></div>`; const overlay = this.elements.modalContainer.querySelector('.modal-overlay'); setTimeout(() => overlay.classList.add('show'), 10); overlay.addEventListener('click', e => { if (e.target === overlay || e.target.closest('.close-btn')) this.closeModal(); }); },
@@ -278,7 +285,8 @@ const App = {
     showNotification(message, type = 'info') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = message; let timeoutId; const dismiss = () => { if (!el.parentElement) return; el.classList.add('hiding'); clearTimeout(timeoutId); el.addEventListener('transitionend', () => el.remove(), { once: true }); }; el.addEventListener('click', dismiss); timeoutId = setTimeout(dismiss, 5000); this.elements.notificationContainer.appendChild(el); },
     setCookie(name, value, days) { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days*24*60*60*1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/"; },
     getCookie(name) { const nameEQ = name + "="; const ca = document.cookie.split(';'); for(let i=0;i < ca.length;i++) { let c = ca[i]; while (c.charAt(0)==' ') c = c.substring(1,c.length); if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length); } return null; },
-    eraseCookie(name) { document.cookie = name+'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; }
+    eraseCookie(name) { document.cookie = name+'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; },
+    async fetchData(url, timeout = 10000) { const controller = new AbortController(); const id = setTimeout(() => controller.abort(), timeout); try { const response = await fetch(url, { signal: controller.signal, cache: 'no-store' }); clearTimeout(id); if (!response.ok) throw new Error('Respuesta de red inválida.'); return await response.json(); } catch (error) { clearTimeout(id); if (error.name === 'AbortError') throw new Error('El servidor tardó mucho en responder. Intenta recargar.'); throw new Error('No se pudo conectar al servidor.'); } },
 };
 
 App.init();
