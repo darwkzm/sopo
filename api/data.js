@@ -18,13 +18,6 @@ export default async function handler(req, res) {
       const { type, payload } = req.body;
       if (type === 'application') {
         db.applications.push({ ...payload, id: Date.now() });
-      } else if (type === 'selection') {
-        const player = db.players.find(p => p.id === payload.playerId);
-        if (player) {
-            player.number_new = payload.newNumber;
-        } else {
-            return res.status(404).json({ error: 'Jugador no encontrado' });
-        }
       } else {
         return res.status(400).json({ error: 'Tipo de POST inválido' });
       }
@@ -63,25 +56,25 @@ async function saveDb(data) {
 }
 
 function getInitialData() {
-  const players = [
-    { id: 1, name: 'Saul', number_current: 5, number_new: null }, 
-    { id: 2, name: 'Enrique', number_current: 11, number_new: null },
-    { id: 3, name: 'Eleonor', number_current: 10, number_new: null },
-    { id: 4, name: 'Masias', number_current: 4, number_new: null },
-    { id: 5, name: 'Angel Cueto', number_current: 77, number_new: null },
-    { id: 6, name: 'Pineda', number_current: 9, number_new: null },
-    { id: 7, name: 'Kevin', number_current: null, number_new: null },
-    { id: 8, name: 'Brandito', number_current: 47, number_new: null },
-    { id: 9, name: 'Iam', number_current: 20, number_new: null },
-    { id: 10, name: 'Jeshua', number_current: 1, number_new: null },
-    { id: 11, name: 'Oliver', number_current: 8, number_new: null },
-    { id: 12, name: 'Roger', number_current: null, number_new: null },
-    { id: 13, name: 'Sinue', number_current: null, number_new: null }
-  ];
+    const players = [
+        { id: 1, name: 'Saul', position: 'MC', number_current: 5, number_new: null, isExpelled: false },
+        { id: 2, name: 'Enrique', position: 'DC', number_current: 11, number_new: null, isExpelled: false },
+        { id: 3, name: 'Eleonor', position: 'MCO', number_current: 10, number_new: null, isExpelled: false },
+        { id: 4, name: 'Masias', position: 'DFC', number_current: 4, number_new: null, isExpelled: false },
+        { id: 5, name: 'Angel Cueto', position: 'ED', number_current: 77, number_new: null, isExpelled: false },
+        { id: 6, name: 'Pineda', position: 'DC', number_current: 9, number_new: null, isExpelled: false },
+        { id: 7, name: 'Kevin', position: 'LTD', number_current: null, number_new: null, isExpelled: false },
+        { id: 8, name: 'Brandito', position: 'DFC', number_current: 47, number_new: null, isExpelled: false },
+        { id: 9, name: 'Iam', position: 'MCD', number_current: 20, number_new: null, isExpelled: false },
+        { id: 10, name: 'Jeshua', position: 'POR', number_current: 1, number_new: null, isExpelled: false },
+        { id: 11, name: 'Oliver', position: 'MC', number_current: 8, number_new: null, isExpelled: false },
+        { id: 12, name: 'Roger', position: 'EI', number_current: null, number_new: null, isExpelled: false },
+        { id: 13, name: 'Sinue', position: 'LTI', number_current: null, number_new: null, isExpelled: false }
+    ];
 
   const playersWithStats = players.map(p => ({
       ...p,
-      stats: { goles: 0, partidos: 0, asistencias: 0, velocidad: 70, regate: 70, defensa: 50 }
+      stats: { goles: 0, partidos: 0, asistencias: 0 }
   }));
   
   return { players: playersWithStats, applications: [], selections: [] };
