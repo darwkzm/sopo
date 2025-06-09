@@ -1,4 +1,3 @@
-/* --- VARIABLES Y ESTILO BASE --- */
 :root {
     --bg-color: #1a1a2e;
     --card-bg: linear-gradient(145deg, #2a2a3e, #1e1e32);
@@ -14,26 +13,18 @@
     --border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* --- ESTILO BASE Y GENERALES --- */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body {
-    font-family: var(--font-body);
-    background-color: var(--bg-color);
-    color: var(--text-primary);
-    overflow-x: hidden;
-}
-.background-texture {
-    position: fixed; inset: 0;
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><g fill="%23333" fill-opacity="0.1"><rect x="50" width="50" height="50"/><rect y="50" width="50" height="50"/></g></svg>');
-    z-index: -1;
-}
+body { font-family: var(--font-body); background-color: var(--bg-color); color: var(--text-primary); }
+.background-texture{ position: fixed; inset: 0; background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><g fill="%23333" fill-opacity="0.1"><rect x="50" width="50" height="50"/><rect y="50" width="50" height="50"/></g></svg>'); z-index: -1;}
+.main-container.hidden { display: none; }
 
 /* --- COMPONENTES GLOBALES: LOADER, NOTIFICACIONES, BOTONES --- */
 .loader-container { position: fixed; inset: 0; background: var(--bg-color); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
 .loader-container:not(.show) { opacity: 0; pointer-events: none; }
 .loader-spinner { width: 50px; height: 50px; border: 5px solid #444; border-top-color: var(--accent-red); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
 #notification-container { position: fixed; bottom: 20px; right: 20px; z-index: 9998; display: flex; flex-direction: column; gap: 10px; }
 .notification { background: #333; padding: 1rem; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideInUpNote 0.5s ease forwards; }
 .notification.error { background: var(--accent-red); }
@@ -44,29 +35,31 @@ body {
 .floating-btn:hover { transform: scale(1.1); }
 .action-btn { background: none; border: 2px solid var(--text-secondary); color: var(--text-secondary); padding: 1rem 2rem; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; }
 .action-btn:hover { border-color: var(--accent-red); color: var(--accent-red); }
+.action-btn-small { background: var(--border-color); border: none; color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.action-btn-small svg { width: 16px; height: 16px; }
+.action-btn-small.approve { background: var(--success-color); }
+.action-btn-small.reject { background: var(--accent-red); }
+
 
 /* --- MAQUETACIÓN PRINCIPAL Y HEADER --- */
 .main-container { max-width: 1400px; margin: 0 auto; padding: 2rem 1rem; }
 .main-header { text-align: center; margin-bottom: 2rem; }
 .main-header h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); color: var(--accent-gold); text-shadow: 0 0 10px hsla(38, 96%, 52%, 0.5); }
 .main-header p { color: var(--text-secondary); letter-spacing: 2px; }
-.main-footer { text-align: center; margin-top: 4rem; }
+.main-footer { text-align: center; margin-top: 4rem; display: flex; justify-content: center; gap: 1rem; }
 
 /* --- TARJETA FIFA --- */
 .players-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2.5rem 2rem; perspective: 1000px; }
 .fifa-card {
     width: 280px; height: 400px; background: var(--card-bg); border-radius: var(--border-radius);
     padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
-    justify-content: space-between; position: relative; border: 1px solid var(--border-color);
-    transform-style: preserve-3d; transition: transform 0.4s ease, box-shadow 0.4s ease;
+    justify-content: space-between; position: relative; border: 2px solid var(--border-color);
+    transform-style: preserve-3d; transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
     cursor: pointer; margin: 0 auto;
 }
 .fifa-card:hover { transform: translateY(-10px) scale(1.05); }
-.fifa-card.is-current-user {
-    border-color: var(--accent-gold);
-    box-shadow: 0 0 25px hsla(38, 96%, 52%, 0.5);
-}
-.fifa-card::after { /* Efecto holográfico */ content: ''; position: absolute; inset: 0; border-radius: var(--border-radius); pointer-events: none; background: radial-gradient(circle 400px at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.2), transparent); opacity: 0; transition: opacity 0.4s ease; }
+.fifa-card.is-current-user { border-color: var(--accent-gold); box-shadow: 0 0 25px hsla(38, 96%, 52%, 0.5); }
+.fifa-card::after { content: ''; position: absolute; inset: 0; border-radius: var(--border-radius); pointer-events: none; background: radial-gradient(circle 400px at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.2), transparent); opacity: 0; transition: opacity 0.4s ease; }
 .fifa-card:hover::after { opacity: 1; }
 
 .card-top { display: flex; justify-content: flex-start; align-items: flex-start; }
@@ -79,14 +72,9 @@ body {
 .player-numbers-display { margin-top: 1rem; font-size: 1.2rem; font-weight: 700; }
 .player-numbers-display .new-number-tag { font-size: 0.9rem; color: var(--accent-gold); margin-left: 0.5rem; }
 
-/* --- TARJETA ROJA --- */
 .fifa-card.is-expelled { box-shadow: 0 0 30px var(--accent-red); cursor: not-allowed; }
 .fifa-card.is-expelled::before { content: ''; position: absolute; inset: 0; background: rgba(230, 57, 70, 0.5); border-radius: var(--border-radius); z-index: 2; }
-.red-card-icon {
-    position: absolute; top: 15px; right: 15px; width: 40px; height: 55px;
-    background: var(--accent-red); border: 2px solid white; border-radius: 5px; z-index: 3;
-    box-shadow: 0 0 10px black; transform: rotate(15deg);
-}
+.red-card-icon { position: absolute; top: 15px; right: 15px; width: 40px; height: 55px; background: var(--accent-red); border: 2px solid white; border-radius: 5px; z-index: 3; box-shadow: 0 0 10px black; transform: rotate(15deg); }
 
 /* --- TABLA DE RESUMEN --- */
 .summary-table-container { margin-top: 4rem; background: #1e1e32; border-radius: var(--border-radius); padding: 1.5rem; border: 1px solid var(--border-color); }
@@ -118,9 +106,11 @@ body {
 .option-btn { width: 100%; padding: 1.25rem; font-size: 1.1rem; background-color: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.2s ease; }
 .option-btn:hover { background-color: var(--accent-red); border-color: var(--accent-red); }
 
-/* --- ESTILOS PANEL DE STAFF --- */
+/* --- PANEL DE STAFF --- */
 .staff-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 1rem; }
 .staff-header h2 { border: none; padding: 0; }
+.staff-header .action-btn-small { background: var(--accent-gold); color: #111; }
+.staff-header .logout-btn { background: none; }
 .staff-tabs { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin: 0 1rem 1rem 1rem; }
 .tab-btn { padding: 10px 0; margin-right: 20px; cursor: pointer; border: none; background: none; font-weight: 700; color: var(--text-secondary); position: relative; font-size: 1rem; }
 .tab-btn.active { color: var(--accent-gold); }
@@ -129,11 +119,10 @@ body {
 
 .staff-list { display: flex; flex-direction: column; gap: 10px; padding: 0 1rem; }
 .staff-list-item { display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: center; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; }
-.staff-list-item.application { grid-template-columns: 1fr 1fr auto; }
+.staff-list-item.application { grid-template-columns: 1fr auto; }
 .staff-player-info strong { font-size: 1.1rem; }
 .staff-player-info span { color: var(--text-secondary); font-size: 0.9rem; margin-left: 0.5rem; }
 .staff-item-actions { display: flex; gap: 10px; }
-.action-btn-small { background: var(--border-color); border: none; color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; font-weight: 700; }
 .action-btn-small.approve { background: var(--success-color); }
 .action-btn-small.reject { background: var(--accent-red); }
 
