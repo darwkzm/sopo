@@ -14,15 +14,20 @@ export default async function handler(req, res) {
       return res.status(200).json(db);
     } 
     
-    // Lógica para POST y PUT (sin cambios de la versión anterior)
     if (req.method === 'POST') {
       const { type, payload } = req.body;
-      if (type === 'application') db.applications.push({ ...payload, id: Date.now() });
-      else if (type === 'selection') {
-        const player = db.players.find(p => p.name === payload.playerName);
-        if(player) player.number_new = payload.newNumber;
-      } 
-      else return res.status(400).json({ error: 'Tipo de POST inválido' });
+      if (type === 'application') {
+        db.applications.push({ ...payload, id: Date.now() });
+      } else if (type === 'selection') {
+        const player = db.players.find(p => p.id === payload.playerId);
+        if (player) {
+            player.number_new = payload.newNumber;
+        } else {
+            return res.status(404).json({ error: 'Jugador no encontrado' });
+        }
+      } else {
+        return res.status(400).json({ error: 'Tipo de POST inválido' });
+      }
     }
     else if (req.method === 'PUT') {
       const { type, payload } = req.body;
