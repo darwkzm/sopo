@@ -2,7 +2,7 @@ import { put, list } from '@vercel/blob';
 
 const DATABASE_FILE = 'database.json';
 
-// Lógica de la API (sin cambios, ya era correcta para manejar la estructura)
+// Lógica de la API para manejar la base de datos en Vercel Blob
 export default async function handler(req, res) {
     try {
         let db = await getDb();
@@ -15,6 +15,7 @@ export default async function handler(req, res) {
             return res.status(200).json(db);
         } 
         
+        // Maneja la creación de nuevas postulaciones o nuevos jugadores
         if (req.method === 'POST') {
             const { type, payload } = req.body;
             if (type === 'application') {
@@ -36,6 +37,7 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: 'Tipo de POST inválido' });
             }
         }
+        // Maneja la actualización de las listas de jugadores o aplicaciones
         else if (req.method === 'PUT') {
             const { type, payload } = req.body;
             if (type === 'players') db.players = payload;
@@ -46,7 +48,7 @@ export default async function handler(req, res) {
             return res.setHeader('Allow', ['GET', 'POST', 'PUT']).status(405).end(`Método ${req.method} no permitido`);
         }
         
-        await saveDb(db);
+        await saveDb(db); // Guarda los cambios en el archivo de Blob
         return res.status(200).json({ success: true, db });
 
     } catch (error) {
@@ -55,6 +57,7 @@ export default async function handler(req, res) {
     }
 }
 
+// --- Funciones auxiliares para Vercel Blob ---
 async function getDb() {
   try {
     const { blobs } = await list({ prefix: DATABASE_FILE, limit: 1 });
@@ -69,6 +72,7 @@ async function saveDb(data) {
   await put(DATABASE_FILE, JSON.stringify(data, null, 2), { access: 'public', contentType: 'application/json' });
 }
 
+// Datos iniciales con la estructura final
 function getInitialData() {
     const players = [
         { id: 1, name: 'Saul', position: 'MC', skill: 'Lectura de Juego', number_current: 5, number_new: null, isExpelled: false },
