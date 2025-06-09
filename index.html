@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Newell's Hub | Edición Definitiva</title>
+    <title>Newell's Hub | Edición Final</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,10 +16,21 @@
     </div>
     <div class="background-texture"></div>
 
+    <div id="role-selection-screen" class="role-selection-container hidden">
+        <div class="main-header">
+            <h1>NEWELL'S HUB</h1>
+            <p>BIENVENIDO</p>
+        </div>
+        <div class="role-options">
+            <button class="role-btn" data-action="player-login">Soy Jugador</button>
+            <button class="role-btn secondary" data-action="spectator-login">Solo Vengo a Ver</button>
+        </div>
+    </div>
+
     <div class="main-container hidden" id="mainContainer">
         <header class="main-header">
-            <h1>NEWELL'S HUB</h1>
-            <p>EDICIÓN DEFINITIVA</p>
+            <h1 id="main-title"></h1>
+            <p id="main-subtitle"></p>
         </header>
 
         <div class="players-grid" id="playersGrid"></div>
@@ -36,7 +47,7 @@
     </div>
     
     <div id="modal-container"></div>
-    <button class="floating-btn" id="staffBtn" aria-label="Abrir panel de staff">
+    <button class="floating-btn hidden" id="staffBtn" aria-label="Abrir panel de staff">
         <svg fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path></svg>
     </button>
     <div id="notification-container"></div>
