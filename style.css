@@ -19,7 +19,17 @@ html { scroll-behavior: smooth; }
 body { font-family: var(--font-body); background-color: var(--bg-color); color: var(--text-primary); }
 .background-texture{ position: fixed; inset: 0; background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><g fill="%23333" fill-opacity="0.1"><rect x="50" width="50" height="50"/><rect y="50" width="50" height="50"/></g></svg>'); z-index: -1;}
 .main-container.hidden { display: none; }
-
+@keyframes slideInUpNote { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.notification {
+    background: #333; padding: 1rem; border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: slideInUpNote 0.5s ease forwards;
+    cursor: pointer;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.notification.hiding {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
 /* --- COMPONENTES GLOBALES: LOADER, NOTIFICACIONES, BOTONES --- */
 .loader-container { position: fixed; inset: 0; background: var(--bg-color); z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
 .loader-container:not(.show) { opacity: 0; pointer-events: none; }
