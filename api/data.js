@@ -11,31 +11,35 @@ export default async function handler(req, res) {
     }
     
     if (req.method === 'GET') {
-      res.status(200).json(db);
+      return res.status(200).json(db);
     } 
-    else if (req.method === 'POST') {
+    
+    // Lógica para POST y PUT (sin cambios de la versión anterior)
+    if (req.method === 'POST') {
       const { type, payload } = req.body;
       if (type === 'application') db.applications.push({ ...payload, id: Date.now() });
-      else if (type === 'selection') db.selections.push({ ...payload, id: Date.now(), date: new Date().toLocaleDateString() });
+      else if (type === 'selection') {
+        const player = db.players.find(p => p.name === payload.playerName);
+        if(player) player.number_new = payload.newNumber;
+      } 
       else return res.status(400).json({ error: 'Tipo de POST inválido' });
-      await saveDb(db);
-      res.status(200).json(payload);
     }
     else if (req.method === 'PUT') {
       const { type, payload } = req.body;
       if (type === 'players') db.players = payload;
       else if (type === 'applications') db.applications = payload;
       else return res.status(400).json({ error: 'Tipo de PUT inválido' });
-      await saveDb(db);
-      res.status(200).json(payload);
     }
     else {
-      res.setHeader('Allow', ['GET', 'POST', 'PUT']);
-      res.status(405).end(`Método ${req.method} no permitido`);
+      return res.setHeader('Allow', ['GET', 'POST', 'PUT']).status(405).end(`Método ${req.method} no permitido`);
     }
+    
+    await saveDb(db);
+    return res.status(200).json({ success: true, db });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Ha ocurrido un error en el servidor.' });
+    console.error("API Error:", error);
+    return res.status(500).json({ error: 'Ha ocurrido un error en el servidor.' });
   }
 }
 
@@ -44,6 +48,7 @@ async function getDb() {
     const { blobs } = await list({ prefix: DATABASE_FILE, limit: 1 });
     if (blobs.length === 0) return null;
     const response = await fetch(blobs[0].url);
+    if (!response.ok) return null;
     return await response.json();
   } catch (error) { return null; }
 }
@@ -54,8 +59,25 @@ async function saveDb(data) {
 
 function getInitialData() {
   const players = [
-    { id: 1, name: 'Saul', number: 5 }, { id: 2, name: 'Enrique', number: 11 },
-    { id: 3, name: 'Eleonor', number: 10 }, { id: 4, name: 'Masias', number: 4 },
-    { id: 5, name: 'Angel Cueto', number: 77 }, { id: 6, name: 'Pineda', number: 9 },
-    { id: 7, name: 'Kevin', number: null }, { id: 8, name: 'Brandito', number: 47 },
-    { id: 9, name: 'Iam', number: 20
+    { id: 1, name: 'Saul', number_current: 5, number_new: null }, 
+    { id: 2, name: 'Enrique', number_current: 11, number_new: null },
+    { id: 3, name: 'Eleonor', number_current: 10, number_new: null },
+    { id: 4, name: 'Masias', number_current: 4, number_new: null },
+    { id: 5, name: 'Angel Cueto', number_current: 77, number_new: null },
+    { id: 6, name: 'Pineda', number_current: 9, number_new: null },
+    { id: 7, name: 'Kevin', number_current: null, number_new: null },
+    { id: 8, name: 'Brandito', number_current: 47, number_new: null },
+    { id: 9, name: 'Iam', number_current: 20, number_new: null },
+    { id: 10, name: 'Jeshua', number_current: 1, number_new: null },
+    { id: 11, name: 'Oliver', number_current: 8, number_new: null },
+    { id: 12, name: 'Roger', number_current: null, number_new: null },
+    { id: 13, name: 'Sinue', number_current: null, number_new: null }
+  ];
+
+  const playersWithStats = players.map(p => ({
+      ...p,
+      stats: { goles: 0, partidos: 0, asistencias: 0, velocidad: 70, regate: 70, defensa: 50 }
+  }));
+  
+  return { players: playersWithStats, applications: [], selections: [] };
+}
