@@ -1,4 +1,4 @@
-// script.js (Versión Definitiva, Corregida y Completa)
+// script.js (Versión Final con Corrección de Botón y Notificaciones)
 const App = {
     db: { players: [], applications: [] },
     state: { loggedInPlayerId: null, isSpectator: false },
@@ -44,8 +44,12 @@ const App = {
     setupEventListeners() {
         this.elements.staffBtn.addEventListener('click', () => this.openStaffLoginModal());
         
+        // CORRECCIÓN: Se usa .closest() para asegurar que el clic funcione siempre.
         this.elements.roleSelectionScreen.addEventListener('click', e => {
-            const action = e.target.dataset.action;
+            const button = e.target.closest('[data-action]');
+            if (!button) return;
+            
+            const action = button.dataset.action;
             if (action === 'player-login') this.openPlayerLoginModal();
             if (action === 'spectator-login') this.enterAsSpectator();
         });
@@ -172,8 +176,8 @@ const App = {
             const password = document.getElementById('playerPass').value;
             if (!selectedId) return this.showNotification('Debes seleccionar tu nombre.', 'error');
             if (password === 'newells') {
-                this.startPlayerSession(parseInt(selectedId));
                 this.closeModal();
+                this.startPlayerSession(parseInt(selectedId));
             } else {
                 this.showNotification('Contraseña incorrecta.', 'error');
             }
@@ -182,10 +186,10 @@ const App = {
     
     openPlayerActionModal(playerId) {
         const player = this.db.players.find(p => p.id === parseInt(playerId));
-        const content = `<h2>${player.name.toUpperCase()}</h2><p>¿Qué deseas hacer?</p><div class="modal-options"><button class="option-btn" id="action-dorsal">Asignar Nuevo Dorsal</button><button class="option-btn" id="action-pos-skill">Actualizar Posición y Skill</button></div>`;
+        const content = `<h2>${player.name.toUpperCase()}</h2><p>¿Qué deseas hacer?</p><div class="modal-options"><button class="option-btn" data-action="dorsal">Asignar Nuevo Dorsal</button><button class="option-btn" data-action="pos-skill">Actualizar Posición y Skill</button></div>`;
         this.renderModal(content);
-        document.getElementById('action-dorsal').addEventListener('click', () => this.openNumberSelectionModal(player));
-        document.getElementById('action-pos-skill').addEventListener('click', () => this.openPosSkillModal(player));
+        this.elements.modalContainer.querySelector('[data-action="dorsal"]').addEventListener('click', () => this.openNumberSelectionModal(player));
+        this.elements.modalContainer.querySelector('[data-action="pos-skill"]').addEventListener('click', () => this.openPosSkillModal(player));
     },
 
     openNumberSelectionModal(player) {
@@ -195,9 +199,9 @@ const App = {
     },
     
     openPosSkillModal(player) {
-         const formContent = `<h2>Actualizar ${player.name}</h2><form id="posSkillForm"><div class="form-group"><label for="position">Posición:</label>${this.getSelectHTML('position', this.POSITIONS, player.position)}</div><div class="form-group"><label for="skill">Skill Principal:</label>${this.getSelectHTML('skill', this.SKILLS, player.skill)}</div><button type="submit" class="submit-btn">Guardar Cambios</button></form>`;
+        const formContent = `<h2>Actualizar ${player.name}</h2><form id="posSkillForm"><div class="form-group"><label for="position">Posición:</label>${this.getSelectHTML('position', this.POSITIONS, player.position)}</div><div class="form-group"><label for="skill">Skill Principal:</label>${this.getSelectHTML('skill', this.SKILLS, player.skill)}</div><button type="submit" class="submit-btn">Guardar Cambios</button></form>`;
         this.renderModal(formContent);
-         document.getElementById('posSkillForm').addEventListener('submit', e => { e.preventDefault(); this.updatePlayer({ ...player, position: document.getElementById('position').value, skill: document.getElementById('skill').value }); this.closeModal(); });
+        document.getElementById('posSkillForm').addEventListener('submit', e => { e.preventDefault(); this.updatePlayer({ ...player, position: document.getElementById('position').value, skill: document.getElementById('skill').value }); this.closeModal(); });
     },
     
     openApplicationModal() {
@@ -227,7 +231,6 @@ const App = {
     openStaffPanel(renderBase = true) {
         const contentHTML = `<div class="staff-header"><h2>Panel de Administración</h2><div class="header-actions"><button class="action-btn-small" data-action="addPlayer">Añadir Jugador</button><button class="action-btn-small logout-btn" data-action="logoutStaff" aria-label="Cerrar Sesión">${this.icons.logout}</button></div></div><div class="staff-tabs"><button class="tab-btn active" data-tab="players">Jugadores</button><button class="tab-btn" data-tab="applications">Solicitudes (${this.db.applications.length})</button></div><div class="staff-content" id="staffContent"></div>`;
         if (renderBase) this.renderModal(contentHTML, true, 'staff-modal');
-        const staffContent = document.getElementById('staffContent');
         this.renderStaffContent('players');
         document.querySelector('.staff-tabs').addEventListener('click', e => { if(e.target.matches('.tab-btn')) { document.querySelector('.staff-tabs .active').classList.remove('active'); e.target.classList.add('active'); this.renderStaffContent(e.target.dataset.tab); }});
     },
@@ -276,8 +279,9 @@ const App = {
         });
     },
     
-    async addPlayer(playerData) { try { const { db } = await this.sendData('/api/data', 'POST', { type: 'new_player', payload: playerData }); this.db = db; this.renderAll(); this.showNotification('Jugador añadido.', 'success'); } catch (e) { this.showNotification(e.message, 'error'); } },
+    async addPlayer(playerData) { try { const { db } = await this.sendData('/api/data', 'POST', { type: 'new_player', payload: playerData }); this.db.players = db.players; this.renderAll(); this.showNotification('Jugador añadido.', 'success'); } catch (e) { this.showNotification(e.message, 'error'); } },
     async updatePlayer(updatedPlayer) { const originalPlayers = JSON.parse(JSON.stringify(this.db.players)); const playerIndex = this.db.players.findIndex(p => p.id === updatedPlayer.id); if (playerIndex > -1) { this.db.players[playerIndex] = updatedPlayer; this.renderAll(); } try { const itemToFlash = document.querySelector(`.staff-list-item[data-player-id="${updatedPlayer.id}"]`); if (itemToFlash) { itemToFlash.classList.add('is-saving'); setTimeout(() => itemToFlash.classList.remove('is-saving'), 800); } await this.sendData('/api/data', 'PUT', { type: 'players', payload: this.db.players }); this.showNotification('Jugador actualizado.', 'success'); } catch(e) { this.showNotification('Error al guardar.', 'error'); this.db.players = originalPlayers; this.renderAll(); } },
+    
     isNumberTaken(number, excludePlayerId = null) { if (number === null || number === 0 || isNaN(number)) return false; return this.db.players.some(p => { if (p.id === excludePlayerId) return false; return p.number_current === number || p.number_new === number; }); },
     getSelectHTML(id, options, selectedValue = '') { return `<select id="${id}">${options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`).join('')}</select>`; },
     renderModal(contentHTML, isLarge = false, customClass = '') { this.elements.modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content ${isLarge ? 'large' : ''} ${customClass}"><button class="close-btn">&times;</button>${contentHTML}</div></div>`; const overlay = this.elements.modalContainer.querySelector('.modal-overlay'); setTimeout(() => overlay.classList.add('show'), 10); overlay.addEventListener('click', e => { if (e.target === overlay || e.target.closest('.close-btn')) this.closeModal(); }); },
