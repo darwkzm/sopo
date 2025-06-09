@@ -1,4 +1,4 @@
-// script.js (Versión Definitiva y Completa)
+// script.js (Versión Final Definitiva y Verificada)
 const App = {
     db: { players: [], applications: [] },
     state: { loggedInPlayerId: null },
@@ -21,17 +21,6 @@ const App = {
         finally { this.elements.loader.classList.remove('show'); }
     },
 
-    checkSession() {
-        const loggedInId = this.getCookie('loggedInPlayerId');
-        if (loggedInId && this.db.players.some(p => p.id === parseInt(loggedInId))) {
-            this.state.loggedInPlayerId = parseInt(loggedInId);
-            this.elements.mainContainer.classList.remove('hidden');
-            this.renderAll();
-        } else {
-            this.openLoginModal();
-        }
-    },
-
     cacheElements() {
         this.elements = {
             loader: document.getElementById('loader'),
@@ -47,6 +36,7 @@ const App = {
     setupEventListeners() {
         this.elements.staffBtn.addEventListener('click', () => this.openStaffLoginModal());
         
+        // Listener principal para botones que se renderizan dinámicamente
         document.body.addEventListener('click', e => {
             const actionBtn = e.target.closest('[data-action]');
             if (!actionBtn) return;
@@ -54,12 +44,19 @@ const App = {
             const action = actionBtn.dataset.action;
             const id = actionBtn.dataset.id;
 
-            if (action === 'showApplication') this.openApplicationModal();
-            if (action === 'logout') this.logout();
-            if (action === 'editPlayer') this.openEditPlayerModal(id);
-            if (action === 'addPlayer') this.openEditPlayerModal(null);
-            if (action === 'approveApplication') this.handleApplication(id, true);
-            if (action === 'rejectApplication') this.handleApplication(id, false);
+            const actions = {
+                showApplication: () => this.openApplicationModal(),
+                logout: () => this.logout(),
+                logoutStaff: () => this.openStaffLoginModal(),
+                addPlayer: () => this.openEditPlayerModal(null),
+                editPlayer: () => this.openEditPlayerModal(id),
+                approveApplication: () => this.handleApplication(id, true),
+                rejectApplication: () => this.handleApplication(id, false),
+            };
+
+            if (actions[action]) {
+                actions[action]();
+            }
         });
         
         this.elements.playersGrid.addEventListener('click', e => {
@@ -87,6 +84,24 @@ const App = {
         });
     },
 
+    checkSession() {
+        const loggedInId = this.getCookie('loggedInPlayerId');
+        if (loggedInId && this.db.players.some(p => p.id === parseInt(loggedInId))) {
+            this.state.loggedInPlayerId = parseInt(loggedInId);
+            this.elements.mainContainer.classList.remove('hidden');
+            this.renderAll();
+        } else {
+            this.openLoginModal();
+        }
+    },
+
+    logout() {
+        this.eraseCookie('loggedInPlayerId');
+        this.state.loggedInPlayerId = null;
+        this.elements.mainContainer.classList.add('hidden');
+        this.openLoginModal();
+    },
+
     renderAll() {
         this.renderPlayerCards();
         this.renderSummaryTable();
@@ -96,6 +111,7 @@ const App = {
         }
     },
     
+    // --- Lógica de Renderizado ---
     renderPlayerCards() {
         this.elements.playersGrid.innerHTML = this.db.players.map(p => this.getPlayerCardHTML(p)).join('');
     },
@@ -107,11 +123,13 @@ const App = {
             ? `#${number_current || '--'} <span class="new-number-tag">(Nuevo: ${number_new})</span>`
             : `#${number_current || '--'}`;
 
-        return `<div class="fifa-card ${isExpelled ? 'is-expelled' : ''} ${isCurrentUser ? 'is-current-user' : ''}" data-player-id="${id}"><div class="card-top"><span class="player-skill">${skill || 'N/A'}</span></div><div class="card-jersey-container">${this.icons.jersey}</div><div class="card-bottom"><h3 class="player-name">${name.toUpperCase()}</h3><p class="player-position">${position || 'Sin Posición'}</p><div class="player-numbers-display">${numberDisplay}</div></div>${isExpelled ? this.icons.redCard : ''}</div>`;
+        return `<div class="fifa-card ${isExpelled ? 'is-expelled' : ''} <span class="math-inline">\{isCurrentUser ? 'is\-current\-user' \: ''\}" data\-player\-id\="</span>{id}"><div class="card-top"><span class="player-skill"><span class="math-inline">\{skill \|\| 'N/A'\}</span\></div\><div class\="card\-jersey\-container"\></span>{this.icons.jersey}</div><div class="card-bottom"><h3 class="player-name"><span class="math-inline">\{name\.toUpperCase\(\)\}</h3\><p class\="player\-position"\></span>{position || 'Sin Posición'}</p><div class="player-numbers-display"><span class="math-inline">\{numberDisplay\}</div\></div\></span>{isExpelled ? this.icons.redCard : ''}</div>`;
     },
 
     renderSummaryTable() {
-        this.elements.summaryBody.innerHTML = this.db.players.sort((a,b) => a.name.localeCompare(b.name)).map(p => `<div class="summary-row"><div>${p.name}</div><div>${p.position || 'N/A'}</div><div>${p.skill || 'N/A'}</div><div>${p.number_current || '--'}</div><div>${p.number_new ? `<span class="new-number">${p.number_new}</span>` : '--'}</div></div>`).join('');
+        this.elements.summaryBody.innerHTML = [...this.db.players]
+            .sort((a,b) => b.stats.goles - a.stats.goles)
+            .map(p => `<div class="summary-row"><div><span class="math-inline">\{p\.name\}</div\><div\></span>{p.position || 'N/A'}</div><div><span class="math-inline">\{p\.skill \|\| 'N/A'\}</div\><div class\="goals"\></span>{p.stats.goles}</div><div><span class="math-inline">\{p\.number\_current \|\| '\-\-'\}</div\><div\></span>{p.number_new ? `<span class="new-number">${p.number_new}</span>` : '--'}</div></div>`).join('');
     },
 
     renderFooter() {
@@ -124,42 +142,18 @@ const App = {
         footer.innerHTML = `<button class="action-btn" data-action="showApplication">¿Eres nuevo? Postúlate</button><button class="action-btn" data-action="logout">Cambiar de Jugador</button>`;
     },
     
-    openLoginModal() {
-        const playerOptions = this.db.players.sort((a, b) => a.name.localeCompare(b.name)).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-        const content = `<h2>¿Quién Eres?</h2><p>Selecciona tu nombre para continuar.</p><form id="playerLoginForm"><div class="form-group"><label for="playerSelect">Selecciona tu Perfil</label><select id="playerSelect" required><option value="" disabled selected>-- Elige tu nombre --</option>${playerOptions}</select></div><button type="submit" class="submit-btn">Entrar</button></form>`;
-        this.renderModal(content, false, 'login-modal');
-        document.getElementById('playerLoginForm').addEventListener('submit', e => {
-            e.preventDefault();
-            const selectedId = document.getElementById('playerSelect').value;
-            if (selectedId) {
-                this.state.loggedInPlayerId = parseInt(selectedId);
-                this.setCookie('loggedInPlayerId', selectedId, 7);
-                this.closeModal();
-                this.elements.mainContainer.classList.remove('hidden');
-                this.renderAll();
-            }
-        });
-    },
-
-    logout() {
-        this.eraseCookie('loggedInPlayerId');
-        this.state.loggedInPlayerId = null;
-        this.elements.mainContainer.classList.add('hidden');
-        this.openLoginModal();
-    },
+    // --- Lógica de Modales ---
 
     openPlayerActionModal(playerId) {
         const player = this.db.players.find(p => p.id === parseInt(playerId));
-        const content = `<h2>${player.name.toUpperCase()}</h2><p>¿Qué deseas hacer?</p><div class="modal-options"><button class="option-btn" data-action="dorsal">Asignar Nuevo Dorsal</button><button class="option-btn" data-action="pos-skill">Actualizar Posición y Skill</button></div>`;
+        const content = `<h2>${player.name.toUpperCase()}</h2><p>¿Qué deseas hacer?</p><div class="modal-options"><button class="option-btn" id="action-dorsal">Asignar Nuevo Dorsal</button><button class="option-btn" id="action-pos-skill">Actualizar Posición y Skill</button></div>`;
         this.renderModal(content);
-        this.elements.modalContainer.querySelector('.modal-options').addEventListener('click', e => {
-            if (e.target.dataset.action === 'dorsal') this.openNumberSelectionModal(player);
-            if (e.target.dataset.action === 'pos-skill') this.openPosSkillModal(player);
-        });
+        document.getElementById('action-dorsal').addEventListener('click', () => this.openNumberSelectionModal(player));
+        document.getElementById('action-pos-skill').addEventListener('click', () => this.openPosSkillModal(player));
     },
-    
+
     openNumberSelectionModal(player) {
-        const formContent = `<h2>Asignar Nuevo Dorsal a ${player.name}</h2><form id="numberForm"><div class="form-group"><label for="newNumber">Nuevo Número (1-99):</label><input type="number" id="newNumber" min="1" max="99" required value="${player.number_new || ''}"></div><button type="submit" class="submit-btn">Guardar Número</button></form>`;
+        const formContent = `<h2>Asignar Nuevo Dorsal a <span class="math-inline">\{player\.name\}</h2\><form id\="numberForm"\><div class\="form\-group"\><label for\="newNumber"\>Nuevo Número \(1\-99\)\:</label\><input type\="number" id\="newNumber" min\="1" max\="99" required value\="</span>{player.number_new || ''}"></div><button type="submit" class="submit-btn">Guardar Número</button></form>`;
         this.renderModal(formContent);
         document.getElementById('numberForm').addEventListener('submit', e => { 
             e.preventDefault(); 
@@ -171,18 +165,18 @@ const App = {
     },
     
     openPosSkillModal(player) {
-        const formContent = `<h2>Actualizar ${player.name}</h2><form id="posSkillForm"><div class="form-group"><label for="position">Posición:</label>${this.getSelectHTML('position', this.POSITIONS, player.position)}</div><div class="form-group"><label for="skill">Skill Principal:</label>${this.getSelectHTML('skill', this.SKILLS, player.skill)}</div><button type="submit" class="submit-btn">Guardar Cambios</button></form>`;
+         const formContent = `<h2>Actualizar <span class="math-inline">\{player\.name\}</h2\><form id\="posSkillForm"\><div class\="form\-group"\><label for\="position"\>Posición\:</label\></span>{this.getSelectHTML('position', this.POSITIONS, player.position)}</div><div class="form-group"><label for="skill">Skill Principal:</label>${this.getSelectHTML('skill', this.SKILLS, player.skill)}</div><button type="submit" class="submit-btn">Guardar Cambios</button></form>`;
         this.renderModal(formContent);
-        document.getElementById('posSkillForm').addEventListener('submit', e => { e.preventDefault(); this.updatePlayer({ ...player, position: document.getElementById('position').value, skill: document.getElementById('skill').value }); this.closeModal(); });
+         document.getElementById('posSkillForm').addEventListener('submit', e => { e.preventDefault(); this.updatePlayer({ ...player, position: document.getElementById('position').value, skill: document.getElementById('skill').value }); this.closeModal(); });
     },
     
     openApplicationModal() {
-        const content = `<h2>Postúlate al Equipo</h2><form id="applicationForm"><div class="form-group"><label for="appName">Nombre:</label><input id="appName" type="text" required></div><div class="form-group"><label for="appNumber">Número Deseado:</label><input id="appNumber" type="number" min="1" max="99" required></div><div class="form-group"><label for="appPosition">Posición Principal:</label>${this.getSelectHTML('appPosition', this.POSITIONS)}</div><div class="form-group"><label for="appSkill">Skill Principal:</label>${this.getSelectHTML('appSkill', this.SKILLS)}</div><button class="submit-btn" type="submit">Enviar Solicitud</button></form>`;
+        const content = `<h2>Postúlate al Equipo</h2><form id="applicationForm"><div class="form-group"><label for="appName">Nombre:</label><input id="appName" type="text" required></div><div class="form-group"><label for="appNumber">Número Deseado:</label><input id="appNumber" type="number" min="1" max="99" required></div><div class="form-group"><label for="appPosition">Posición Principal:</label><span class="math-inline">\{this\.getSelectHTML\('appPosition', this\.POSITIONS\)\}</div\><div class\="form\-group"\><label for\="appSkill"\>Skill Principal\:</label\></span>{this.getSelectHTML('appSkill', this.SKILLS)}</div><button class="submit-btn" type="submit">Enviar Solicitud</button></form>`;
         this.renderModal(content);
         document.getElementById('applicationForm').addEventListener('submit', async e => {
             e.preventDefault();
             const newNumber = parseInt(document.getElementById('appNumber').value);
-            if (this.isNumberTaken(newNumber)) return this.showNotification('El número deseado ya está en uso.', 'error');
+            if (this.isNumberTaken(newNumber)) return this.showNotification('El número deseado ya está en uso. Elige otro.', 'error');
             const payload = { name: document.getElementById('appName').value, number: newNumber, position: document.getElementById('appPosition').value, skill: document.getElementById('appSkill').value, };
             try {
                 const { db } = await this.sendData('/api/data', 'POST', { type: 'application', payload });
@@ -196,22 +190,21 @@ const App = {
     // --- Lógica del Panel de Staff ---
     openStaffLoginModal() {
         const content = `<h2>Acceso Staff</h2><form id="staffLoginForm"><div class="form-group"><label for="staffUser">Usuario:</label><input type="text" id="staffUser"></div><div class="form-group"><label for="staffPass">Contraseña:</label><input type="password" id="staffPass"></div><button class="submit-btn" type="submit">Iniciar Sesión</button></form>`;
-        this.renderModal(content);
+        this.renderModal(content, false, 'staff-login-modal');
         document.getElementById('staffLoginForm').addEventListener('submit', e => { e.preventDefault(); const user = document.getElementById('staffUser').value, pass = document.getElementById('staffPass').value; if (user === 'newell' && pass === 'staff') { this.openStaffPanel(); } else { this.showNotification('Credenciales incorrectas.', 'error'); }});
     },
 
     openStaffPanel(renderBase = true) {
-        const contentHTML = `<div class="staff-header"><h2>Panel de Administración</h2><div><button class="action-btn-small" data-action="addPlayer">Añadir Jugador</button><button class="action-btn-small logout-btn" data-action="logoutStaff" aria-label="Cerrar Sesión">${this.icons.logout}</button></div></div><div class="staff-tabs"><button class="tab-btn active" data-tab="players">Jugadores</button><button class="tab-btn" data-tab="applications">Solicitudes (${this.db.applications.length})</button></div><div class="staff-content" id="staffContent"></div>`;
+        const contentHTML = `<div class="staff-header"><h2>Panel de Administración</h2><div class="header-actions"><button class="action-btn-small" data-action="addPlayer">Añadir Jugador</button><button class="action-btn-small logout-btn" data-action="logoutStaff" aria-label="Cerrar Sesión"><span class="math-inline">\{this\.icons\.logout\}</button\></div\></div\><div class\="staff\-tabs"\><button class\="tab\-btn active" data\-tab\="players"\>Jugadores</button\><button class\="tab\-btn" data\-tab\="applications"\>Solicitudes \(</span>{this.db.applications.length})</button></div><div class="staff-content" id="staffContent"></div>`;
         if (renderBase) this.renderModal(contentHTML, true, 'staff-modal');
-        const staffContent = document.getElementById('staffContent');
-        this.renderStaffPlayers(staffContent);
-        document.querySelector('.staff-tabs').addEventListener('click', e => { if(e.target.matches('.tab-btn')) { document.querySelector('.staff-tabs .active').classList.remove('active'); e.target.classList.add('active'); const tab = e.target.dataset.tab; if (tab === 'players') this.renderStaffPlayers(staffContent); else this.renderStaffApplications(staffContent); }});
-        document.querySelector('.staff-header').addEventListener('click', e => {
-            const target = e.target.closest('[data-action]');
-            if(!target) return;
-            if (target.dataset.action === 'addPlayer') this.openEditPlayerModal(null);
-            if (target.dataset.action === 'logoutStaff') this.openStaffLoginModal();
-        });
+        this.renderStaffPlayers(document.getElementById('staffContent'));
+        document.querySelector('.staff-tabs').addEventListener('click', e => { if(e.target.matches('.tab-btn')) { document.querySelector('.staff-tabs .active').classList.remove('active'); e.target.classList.add('active'); this.renderStaffContent(e.target.dataset.tab); }});
+    },
+
+    renderStaffContent(tab) {
+        const container = document.getElementById('staffContent');
+        if (tab === 'players') this.renderStaffPlayers(container);
+        else this.renderStaffApplications(container);
     },
 
     renderStaffPlayers(container) {
@@ -225,35 +218,34 @@ const App = {
     
     async handleApplication(appId, isApproved) {
         appId = parseInt(appId);
-        const app = this.db.applications.find(a => a.id === appId);
-        if (!app) return;
         if (isApproved) {
-            if (this.isNumberTaken(app.number)) {
-                return this.showNotification('No se puede aprobar: El número ya está en uso.', 'error');
-            }
+            const app = this.db.applications.find(a => a.id === appId);
+            if (!app) return;
+            if (this.isNumberTaken(app.number)) return this.showNotification('No se puede aprobar: El número ya está en uso.', 'error');
             await this.addPlayer({ name: app.name, position: app.position, skill: app.skill, number_current: app.number });
         }
+        const originalApps = JSON.parse(JSON.stringify(this.db.applications));
         this.db.applications = this.db.applications.filter(a => a.id !== appId);
-        await this.sendData('/api/data', 'PUT', { type: 'applications', payload: this.db.applications });
-        this.renderAll();
-        this.showNotification(`Solicitud ${isApproved ? 'aprobada' : 'rechazada'}.`, 'success');
+        try {
+            await this.sendData('/api/data', 'PUT', { type: 'applications', payload: this.db.applications });
+            this.renderAll();
+            this.showNotification(`Solicitud ${isApproved ? 'aprobada' : 'rechazada'}.`, 'success');
+        } catch (e) { this.db.applications = originalApps; this.renderAll(); this.showNotification('Error al procesar la solicitud.', 'error');}
     },
 
     openEditPlayerModal(playerId) {
         const isNew = playerId === null;
         const player = isNew ? { stats: {} } : this.db.players.find(p => p.id === parseInt(playerId));
-        const modalContent = `<h2>${isNew ? 'Añadir Nuevo Jugador' : 'Editar a ' + player.name}</h2><form id="editForm"><div class="form-grid"><div class="form-group"><label>Nombre</label><input id="name" value="${player.name || ''}" required></div><div class="form-group"><label>Posición</label>${this.getSelectHTML('position', this.POSITIONS, player.position)}</div><div class="form-group"><label>Skill</label>${this.getSelectHTML('skill', this.SKILLS, player.skill)}</div><div class="form-group"><label>N° Actual</label><input id="num_current" type="number" value="${player.number_current || ''}"></div><div class="form-group"><label>N° Nuevo</label><input id="num_new" type="number" value="${player.number_new || ''}"></div><div class="form-group"><label>Goles</label><input id="stat_goles" type="number" value="${player.stats?.goles || 0}"></div><div class="form-group"><label>Partidos</label><input id="stat_partidos" type="number" value="${player.stats?.partidos || 0}"></div><div class="form-group"><label>Asistencias</label><input id="stat_asistencias" type="number" value="${player.stats?.asistencias || 0}"></div></div><div class="form-group checkbox-group"><input id="isExpelled" type="checkbox" ${player.isExpelled ? 'checked' : ''}><label for="isExpelled">Marcar como Expulsado</label></div><button type="submit" class="submit-btn">${isNew ? 'Añadir al Plantel' : 'Guardar Cambios'}</button></form>`;
+        const modalContent = `<h2><span class="math-inline">\{isNew ? 'Añadir Nuevo Jugador' \: 'Editar a ' \+ player\.name\}</h2\><form id\="editForm"\><div class\="form\-grid"\><div class\="form\-group"\><label\>Nombre</label\><input id\="name" value\="</span>{player.name || ''}" required></div><div class="form-group"><label>Posición</label><span class="math-inline">\{this\.getSelectHTML\('position', this\.POSITIONS, player\.position\)\}</div\><div class\="form\-group"\><label\>Skill</label\></span>{this.getSelectHTML('skill', this.SKILLS, player.skill)}</div><div class="form-group"><label>N° Actual</label><input id="num_current" type="number" value="<span class="math-inline">\{player\.number\_current \|\| ''\}"\></div\><div class\="form\-group"\><label\>N° Nuevo</label\><input id\="num\_new" type\="number" value\="</span>{player.number_new || ''}"></div><div class="form-group"><label>Goles</label><input id="stat_goles" type="number" value="<span class="math-inline">\{player\.stats?\.goles \|\| 0\}"\></div\><div class\="form\-group"\><label\>Partidos</label\><input id\="stat\_partidos" type\="number" value\="</span>{player.stats?.partidos || 0}"></div><div class="form-group"><label>Asistencias</label><input id="stat_asistencias" type="number" value="${player.stats?.asistencias || 0}"></div></div><div class="form-group checkbox-group"><input id="isExpelled" type="checkbox" <span class="math-inline">\{player\.isExpelled ? 'checked' \: ''\}\><label for\="isExpelled"\>Marcar como Expulsado</label\></div\><button type\="submit" class\="submit\-btn"\></span>{isNew ? 'Añadir al Plantel' : 'Guardar Cambios'}</button></form>`;
         this.renderModal(modalContent, true);
 
         document.getElementById('editForm').addEventListener('submit', e => {
             e.preventDefault();
             const num_current = parseInt(document.getElementById('num_current').value) || null;
             const num_new = parseInt(document.getElementById('num_new').value) || null;
-            
             const idToCheck = isNew ? null : player.id;
             if (this.isNumberTaken(num_current, idToCheck)) return this.showNotification(`El número actual ${num_current} ya está en uso.`, 'error');
             if (this.isNumberTaken(num_new, idToCheck)) return this.showNotification(`El número nuevo ${num_new} ya está en uso.`, 'error');
-
             const formPlayer = {
                 id: player.id, name: document.getElementById('name').value, position: document.getElementById('position').value, skill: document.getElementById('skill').value,
                 number_current: num_current, number_new: num_new, isExpelled: document.getElementById('isExpelled').checked,
@@ -264,15 +256,8 @@ const App = {
         });
     },
     
-    // --- Lógica de Datos y API (con UI Optimista) ---
-    async addPlayer(playerData) {
-        try {
-            const { db } = await this.sendData('/api/data', 'POST', { type: 'new_player', payload: playerData });
-            this.db.players = db.players;
-            this.renderAll();
-            this.showNotification('Jugador añadido con éxito.', 'success');
-        } catch (e) { this.showNotification(e.message, 'error'); }
-    },
+    // --- Lógica de Datos y API ---
+    async addPlayer(playerData) { try { const { db } = await this.sendData('/api/data', 'POST', { type: 'new_player', payload: playerData }); this.db = db; this.renderAll(); this.showNotification('Jugador añadido.', 'success'); } catch (e) { this.showNotification(e.message, 'error'); } },
     async updatePlayer(updatedPlayer) {
         const originalPlayers = JSON.parse(JSON.stringify(this.db.players));
         const playerIndex = this.db.players.findIndex(p => p.id === updatedPlayer.id);
@@ -280,26 +265,8 @@ const App = {
         try {
             await this.sendData('/api/data', 'PUT', { type: 'players', payload: this.db.players });
             this.showNotification('Jugador actualizado.', 'success');
-        } catch(e) { this.showNotification('Error al guardar. Revirtiendo...', 'error'); this.db.players = originalPlayers; this.renderAll(); }
+        } catch(e) { this.showNotification('Error al guardar.', 'error'); this.db.players = originalPlayers; this.renderAll(); }
     },
 
     // --- Funciones de Utilidad ---
-    isNumberTaken(number, excludePlayerId = null) {
-        if (number === null || number === 0 || isNaN(number)) return false;
-        return this.db.players.some(p => {
-            if (p.id === excludePlayerId) return false;
-            return p.number_current === number || p.number_new === number;
-        });
-    },
-    getSelectHTML(id, options, selectedValue = '') { return `<select id="${id}">${options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`).join('')}</select>`; },
-    renderModal(contentHTML, isLarge = false, customClass = '') { this.elements.modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content ${isLarge ? 'large' : ''} ${customClass}"><button class="close-btn">&times;</button>${contentHTML}</div></div>`; const overlay = this.elements.modalContainer.querySelector('.modal-overlay'); setTimeout(() => overlay.classList.add('show'), 10); overlay.addEventListener('click', e => { if (e.target === overlay || e.target.closest('.close-btn')) this.closeModal(); }); },
-    closeModal() { const overlay = this.elements.modalContainer.querySelector('.modal-overlay'); if (overlay) { overlay.classList.remove('show'); overlay.addEventListener('transitionend', () => overlay.remove(), { once: true }); } },
-    showNotification(message, type = 'info') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = message; this.elements.notificationContainer.appendChild(el); setTimeout(() => el.remove(), 4000); },
-    async fetchData(url) { const res = await fetch(url); if (!res.ok) throw new Error('No se pudo conectar al servidor.'); return res.json(); },
-    async sendData(url, method, body) { const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || 'Ocurrió un error.'); } return res.json(); },
-    setCookie(name, value, days) { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days*24*60*60*1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/"; },
-    getCookie(name) { const nameEQ = name + "="; const ca = document.cookie.split(';'); for(let i=0;i < ca.length;i++) { let c = ca[i]; while (c.charAt(0)==' ') c = c.substring(1,c.length); if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length); } return null; },
-    eraseCookie(name) { document.cookie = name+'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; }
-};
-
-App.init();
+    isNumberTaken(number, excludePlayerId = null) { if (number === null || number ===
