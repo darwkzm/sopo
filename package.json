@@ -1,7 +1,8 @@
 {
-  "name": "newells-hub-kv-final",
-  "version": "12.0.0",
+  "name": "newells-hub-final-corregido",
+  "version": "1.0.0",
+  "description": "Aplicación final para la gestión del equipo Newell's Hub.",
   "dependencies": {
-    "@vercel/kv": "^1.1.1"
+    "@vercel/kv": "^1.3.0"
   }
 }
