@@ -1,7 +1,6 @@
-// script.js (Versión Final Definitiva y Verificada)
 const App = {
     db: { players: [], applications: [] },
-    state: { loggedInPlayerId: null },
+    state: { loggedInPlayerId: null, isSpectator: false },
     elements: {},
     POSITIONS: ['POR', 'DFC', 'LTD', 'LTI', 'MCD', 'MC', 'MCO', 'ED', 'EI', 'DC'],
     SKILLS: ['Velocidad', 'Tiro', 'Pase Clave', 'Regate', 'Entradas', 'Fuerza', 'Visión', 'Reflejos', 'Resistencia', 'Lectura de Juego', 'Cabezazo', 'Centros'],
@@ -15,32 +14,39 @@ const App = {
         this.cacheElements();
         this.setupEventListeners();
         try {
-            this.showNotification('Cargando datos del equipo...', 'info');
-            this.db = await this.fetchData('/api/data', 15000); // 15 segundos de timeout
+            this.db = await this.fetchData('/api/data', 15000);
             this.checkSession();
         } catch (error) {
             this.showNotification(error.message, 'error');
             this.elements.loader.innerHTML = `<p style="color: var(--text-secondary);">${error.message}</p>`;
         } finally {
-            // Ocultar el loader después de un pequeño retraso para que se lean los mensajes
-            setTimeout(() => this.elements.loader.classList.remove('show'), 2000);
+            setTimeout(() => this.elements.loader.classList.remove('show'), 500);
         }
     },
 
     cacheElements() {
         this.elements = {
             loader: document.getElementById('loader'),
-            mainContainer: document.querySelector('.main-container'),
+            roleSelectionScreen: document.getElementById('role-selection-screen'),
+            mainContainer: document.getElementById('mainContainer'),
             playersGrid: document.getElementById('playersGrid'),
             summaryBody: document.getElementById('summaryBody'),
             modalContainer: document.getElementById('modal-container'),
             staffBtn: document.getElementById('staffBtn'),
             notificationContainer: document.getElementById('notification-container'),
+            mainTitle: document.getElementById('main-title'),
+            mainSubtitle: document.getElementById('main-subtitle'),
         };
     },
 
     setupEventListeners() {
         this.elements.staffBtn.addEventListener('click', () => this.openStaffLoginModal());
+        
+        this.elements.roleSelectionScreen.addEventListener('click', e => {
+            const action = e.target.dataset.action;
+            if (action === 'player-login') this.openPlayerLoginModal();
+            if (action === 'spectator-login') this.enterAsSpectator();
+        });
         
         document.body.addEventListener('click', e => {
             const actionBtn = e.target.closest('[data-action]');
@@ -50,29 +56,30 @@ const App = {
             const id = actionBtn.dataset.id;
 
             const actions = {
-                showApplication: () => this.openApplicationModal(),
                 logout: () => this.logout(),
+                showApplication: () => this.openApplicationModal(),
                 logoutStaff: () => this.openStaffLoginModal(),
                 addPlayer: () => this.openEditPlayerModal(null),
                 editPlayer: () => this.openEditPlayerModal(id),
                 approveApplication: () => this.handleApplication(id, true),
                 rejectApplication: () => this.handleApplication(id, false),
             };
-
             if (actions[action]) actions[action]();
         });
         
         this.elements.playersGrid.addEventListener('click', e => {
             const card = e.target.closest('.fifa-card');
-            if (card) {
-                const clickedPlayerId = parseInt(card.dataset.playerId);
-                if (clickedPlayerId === this.state.loggedInPlayerId) {
-                    if (!card.classList.contains('is-expelled')) {
-                        this.openPlayerActionModal(clickedPlayerId);
-                    }
-                } else {
-                    this.showNotification('Solo puedes modificar tu propia ficha.', 'info');
-                }
+            if (!card) return;
+
+            if (this.state.isSpectator) {
+                return this.showNotification('Estás en modo espectador. No puedes editar.', 'info');
+            }
+            
+            const clickedPlayerId = parseInt(card.dataset.playerId);
+            if (clickedPlayerId === this.state.loggedInPlayerId) {
+                if (!card.classList.contains('is-expelled')) this.openPlayerActionModal(clickedPlayerId);
+            } else {
+                this.showNotification('Solo puedes modificar tu propia ficha.', 'info');
             }
         });
 
@@ -90,35 +97,54 @@ const App = {
     checkSession() {
         const loggedInId = this.getCookie('loggedInPlayerId');
         if (loggedInId && this.db.players.some(p => p.id === parseInt(loggedInId))) {
-            this.state.loggedInPlayerId = parseInt(loggedInId);
-            this.elements.mainContainer.classList.remove('hidden');
-            this.renderAll();
+            this.startPlayerSession(parseInt(loggedInId));
         } else {
-            this.openLoginModal();
+            this.elements.roleSelectionScreen.classList.remove('hidden');
         }
+    },
+    
+    startPlayerSession(playerId) {
+        this.state.loggedInPlayerId = playerId;
+        this.state.isSpectator = false;
+        const player = this.db.players.find(p => p.id === playerId);
+        this.setCookie('loggedInPlayerId', playerId, 7);
+        this.elements.roleSelectionScreen.classList.add('hidden');
+        this.elements.mainContainer.classList.remove('hidden');
+        this.elements.staffBtn.classList.remove('hidden');
+        this.elements.mainTitle.textContent = `BIENVENIDO, ${player.name.toUpperCase()}`;
+        this.elements.mainSubtitle.textContent = "Gestiona tu perfil y elige tu nuevo dorsal";
+        this.renderAll();
+    },
+
+    enterAsSpectator() {
+        this.state.loggedInPlayerId = null;
+        this.state.isSpectator = true;
+        this.eraseCookie('loggedInPlayerId');
+        this.elements.roleSelectionScreen.classList.add('hidden');
+        this.elements.mainContainer.classList.remove('hidden');
+        this.elements.staffBtn.classList.remove('hidden');
+        this.elements.mainTitle.textContent = "NEWELL'S HUB";
+        this.elements.mainSubtitle.textContent = "MODO ESPECTADOR";
+        this.renderAll();
     },
 
     logout() {
         this.eraseCookie('loggedInPlayerId');
         this.state.loggedInPlayerId = null;
+        this.state.isSpectator = false;
         this.elements.mainContainer.classList.add('hidden');
-        this.openLoginModal();
+        this.elements.staffBtn.classList.add('hidden');
+        this.elements.roleSelectionScreen.classList.remove('hidden');
     },
 
     renderAll() {
         this.renderPlayerCards();
         this.renderSummaryTable();
         this.renderFooter(); 
-        if (document.querySelector('.staff-modal')) {
-            this.openStaffPanel(false);
-        }
+        if (document.querySelector('.staff-modal')) this.openStaffPanel(false);
     },
     
-    // --- LÓGICA DE RENDERIZADO ---
-    renderPlayerCards() {
-        this.elements.playersGrid.innerHTML = this.db.players
-            .map(p => this.getPlayerCardHTML(p)).join('');
-    },
+    renderPlayerCards() { this.elements.playersGrid.innerHTML = this.db.players.map(p => this.getPlayerCardHTML(p)).join(''); },
     
     getPlayerCardHTML(player) {
         const { id, name, position, skill, number_current, number_new, isExpelled } = player;
@@ -138,34 +164,23 @@ const App = {
 
     renderFooter() {
         let footer = document.querySelector('.main-footer');
-        if (!footer) {
-            footer = document.createElement('footer');
-            footer.className = 'main-footer';
-            this.elements.mainContainer.appendChild(footer);
-        }
-        footer.innerHTML = `<button class="action-btn" data-action="showApplication">¿Eres nuevo? Postúlate</button><button class="action-btn" data-action="logout">Cambiar de Jugador</button>`;
+        if (!footer) { footer = document.createElement('footer'); footer.className = 'main-footer'; this.elements.mainContainer.appendChild(footer); }
+        const buttonText = this.state.isSpectator ? "Volver al Inicio" : "Cambiar de Jugador";
+        footer.innerHTML = `<button class="action-btn" data-action="showApplication">¿Eres nuevo? Postúlate</button><button class="action-btn" data-action="logout">${buttonText}</button>`;
     },
     
-    // --- LÓGICA DE MODALES ---
-
     openPlayerActionModal(playerId) {
         const player = this.db.players.find(p => p.id === parseInt(playerId));
         const content = `<h2>${player.name.toUpperCase()}</h2><p>¿Qué deseas hacer?</p><div class="modal-options"><button class="option-btn" id="action-dorsal">Asignar Nuevo Dorsal</button><button class="option-btn" id="action-pos-skill">Actualizar Posición y Skill</button></div>`;
         this.renderModal(content);
-        document.getElementById('action-dorsal').addEventListener('click', () => this.openNumberSelectionModal(player));
-        document.getElementById('action-pos-skill').addEventListener('click', () => this.openPosSkillModal(player));
+        this.elements.modalContainer.querySelector('#action-dorsal').addEventListener('click', () => this.openNumberSelectionModal(player));
+        this.elements.modalContainer.querySelector('#action-pos-skill').addEventListener('click', () => this.openPosSkillModal(player));
     },
 
     openNumberSelectionModal(player) {
         const formContent = `<h2>Asignar Nuevo Dorsal a ${player.name}</h2><form id="numberForm"><div class="form-group"><label for="newNumber">Nuevo Número (1-99):</label><input type="number" id="newNumber" min="1" max="99" required value="${player.number_new || ''}"></div><button type="submit" class="submit-btn">Guardar Número</button></form>`;
         this.renderModal(formContent);
-        document.getElementById('numberForm').addEventListener('submit', e => { 
-            e.preventDefault(); 
-            const newNumber = parseInt(document.getElementById('newNumber').value);
-            if (this.isNumberTaken(newNumber, player.id)) return this.showNotification('Ese dorsal ya está en uso. Elige otro.', 'error');
-            this.updatePlayer({ ...player, number_new: newNumber || null }); 
-            this.closeModal(); 
-        });
+        document.getElementById('numberForm').addEventListener('submit', e => { e.preventDefault(); const newNumber = parseInt(document.getElementById('newNumber').value); if (this.isNumberTaken(newNumber, player.id)) return this.showNotification('Ese dorsal ya está en uso. Elige otro.', 'error'); this.updatePlayer({ ...player, number_new: newNumber || null }); this.closeModal(); });
     },
     
     openPosSkillModal(player) {
@@ -187,12 +202,11 @@ const App = {
                 this.db.applications = db.applications;
                 this.showNotification('¡Solicitud enviada con éxito!', 'success');
                 this.closeModal();
+                if(document.querySelector('.staff-modal')) this.openStaffPanel(false);
             } catch(error) { this.showNotification(error.message, 'error'); }
         });
     },
 
-    // --- Lógica del Panel de Staff ---
-    
     openStaffLoginModal() {
         const content = `<h2>Acceso Staff</h2><form id="staffLoginForm"><div class="form-group"><label for="staffUser">Usuario:</label><input type="text" id="staffUser"></div><div class="form-group"><label for="staffPass">Contraseña:</label><input type="password" id="staffPass"></div><button class="submit-btn" type="submit">Iniciar Sesión</button></form>`;
         this.renderModal(content, false, 'staff-login-modal');
@@ -202,46 +216,27 @@ const App = {
     openStaffPanel(renderBase = true) {
         const contentHTML = `<div class="staff-header"><h2>Panel de Administración</h2><div class="header-actions"><button class="action-btn-small" data-action="addPlayer">Añadir Jugador</button><button class="action-btn-small logout-btn" data-action="logoutStaff" aria-label="Cerrar Sesión">${this.icons.logout}</button></div></div><div class="staff-tabs"><button class="tab-btn active" data-tab="players">Jugadores</button><button class="tab-btn" data-tab="applications">Solicitudes (${this.db.applications.length})</button></div><div class="staff-content" id="staffContent"></div>`;
         if (renderBase) this.renderModal(contentHTML, true, 'staff-modal');
-        
         const staffContent = document.getElementById('staffContent');
-        this.renderStaffPlayers(staffContent); // Carga la primera pestaña por defecto
-        
-        document.querySelector('.staff-tabs').addEventListener('click', e => {
-            if(e.target.matches('.tab-btn')) {
-                document.querySelector('.staff-tabs .active').classList.remove('active');
-                e.target.classList.add('active');
-                this.renderStaffContent(e.target.dataset.tab);
-            }
-        });
+        this.renderStaffContent('players');
+        document.querySelector('.staff-tabs').addEventListener('click', e => { if(e.target.matches('.tab-btn')) { document.querySelector('.staff-tabs .active').classList.remove('active'); e.target.classList.add('active'); this.renderStaffContent(e.target.dataset.tab); }});
     },
 
-    renderStaffContent(tab) {
-        const container = document.getElementById('staffContent');
-        if (tab === 'players') this.renderStaffPlayers(container);
-        else this.renderStaffApplications(container);
-    },
-
-    renderStaffPlayers(container) {
-        container.innerHTML = `<div class="staff-list">${this.db.players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="staff-list-item"><div class="staff-player-info"><strong>${p.name}</strong><br><span>${p.position || 'N/A'} / #${p.number_current || '--'}</span></div><div class="staff-item-actions"><button class="action-btn-small" data-action="editPlayer" data-id="${p.id}">Editar</button></div></div>`).join('')}</div>`;
-    },
-
-    renderStaffApplications(container) {
-        if(this.db.applications.length === 0) { container.innerHTML = '<p style="padding: 1rem;">No hay solicitudes pendientes.</p>'; return; }
-        container.innerHTML = `<div class="staff-list">${this.db.applications.map(app => `<div class="staff-list-item application"><div><strong>${app.name}</strong><br><span>${app.position} / #${app.number}</span></div><div class="staff-item-actions"><button class="action-btn-small approve" data-action="approveApplication" data-id="${app.id}">Aprobar</button><button class="action-btn-small reject" data-action="rejectApplication" data-id="${app.id}">Rechazar</button></div></div>`).join('')}</div>`;
-    },
+    renderStaffContent(tab) { const container = document.getElementById('staffContent'); if (tab === 'players') this.renderStaffPlayers(container); else this.renderStaffApplications(container); },
+    renderStaffPlayers(container) { container.innerHTML = `<div class="staff-list">${this.db.players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="staff-list-item" data-id="${p.id}"><div class="staff-player-info"><strong>${p.name}</strong><br><span>${p.position || 'N/A'} / #${p.number_current || '--'}</span></div><div class="staff-item-actions"><button class="action-btn-small" data-action="editPlayer" data-id="${p.id}">Editar</button></div></div>`).join('')}</div>`; },
+    renderStaffApplications(container) { if(this.db.applications.length === 0) { container.innerHTML = '<p style="padding: 1rem;">No hay solicitudes pendientes.</p>'; return; } container.innerHTML = `<div class="staff-list">${this.db.applications.map(app => `<div class="staff-list-item application"><div><strong>${app.name}</strong><br><span>${app.position} / #${app.number}</span></div><div class="staff-item-actions"><button class="action-btn-small approve" data-action="approveApplication" data-id="${app.id}">Aprobar</button><button class="action-btn-small reject" data-action="rejectApplication" data-id="${app.id}">Rechazar</button></div></div>`).join('')}</div>`; },
     
     async handleApplication(appId, isApproved) {
         appId = parseInt(appId);
+        const originalApps = JSON.parse(JSON.stringify(this.db.applications));
+        const appIndex = this.db.applications.findIndex(a => a.id === appId);
+        if (appIndex === -1) return;
+        
         if (isApproved) {
-            const app = this.db.applications.find(a => a.id === appId);
-            if (!app) return;
-            if (this.isNumberTaken(app.number)) {
-                return this.showNotification('No se puede aprobar: El número ya está en uso.', 'error');
-            }
+            const app = this.db.applications[appIndex];
+            if (this.isNumberTaken(app.number)) return this.showNotification('No se puede aprobar: El número ya está en uso.', 'error');
             await this.addPlayer({ name: app.name, position: app.position, skill: app.skill, number_current: app.number });
         }
-        const originalApps = JSON.parse(JSON.stringify(this.db.applications));
-        this.db.applications = this.db.applications.filter(a => a.id !== appId);
+        this.db.applications.splice(appIndex, 1);
         try {
             await this.sendData('/api/data', 'PUT', { type: 'applications', payload: this.db.applications });
             this.renderAll();
@@ -251,7 +246,7 @@ const App = {
 
     openEditPlayerModal(playerId) {
         const isNew = playerId === null;
-        const player = isNew ? { stats: {} } : this.db.players.find(p => p.id === parseInt(playerId));
+        const player = isNew ? { stats: {}, isExpelled: false } : this.db.players.find(p => p.id === parseInt(playerId));
         const modalContent = `<h2>${isNew ? 'Añadir Nuevo Jugador' : 'Editar a ' + player.name}</h2><form id="editForm"><div class="form-grid"><div class="form-group"><label>Nombre</label><input id="name" value="${player.name || ''}" required></div><div class="form-group"><label>Posición</label>${this.getSelectHTML('position', this.POSITIONS, player.position)}</div><div class="form-group"><label>Skill</label>${this.getSelectHTML('skill', this.SKILLS, player.skill)}</div><div class="form-group"><label>N° Actual</label><input id="num_current" type="number" value="${player.number_current || ''}"></div><div class="form-group"><label>N° Nuevo</label><input id="num_new" type="number" value="${player.number_new || ''}"></div><div class="form-group"><label>Goles</label><input id="stat_goles" type="number" value="${player.stats?.goles || 0}"></div><div class="form-group"><label>Partidos</label><input id="stat_partidos" type="number" value="${player.stats?.partidos || 0}"></div><div class="form-group"><label>Asistencias</label><input id="stat_asistencias" type="number" value="${player.stats?.asistencias || 0}"></div></div><div class="form-group checkbox-group"><input id="isExpelled" type="checkbox" ${player.isExpelled ? 'checked' : ''}><label for="isExpelled">Marcar como Expulsado</label></div><button type="submit" class="submit-btn">${isNew ? 'Añadir al Plantel' : 'Guardar Cambios'}</button></form>`;
         this.renderModal(modalContent, true);
 
@@ -273,21 +268,14 @@ const App = {
     },
     
     async addPlayer(playerData) { try { const { db } = await this.sendData('/api/data', 'POST', { type: 'new_player', payload: playerData }); this.db = db; this.renderAll(); this.showNotification('Jugador añadido.', 'success'); } catch (e) { this.showNotification(e.message, 'error'); } },
-    async updatePlayer(updatedPlayer) {
-        const originalPlayers = JSON.parse(JSON.stringify(this.db.players));
-        const playerIndex = this.db.players.findIndex(p => p.id === updatedPlayer.id);
-        if (playerIndex > -1) { this.db.players[playerIndex] = updatedPlayer; this.renderAll(); }
-        try {
-            await this.sendData('/api/data', 'PUT', { type: 'players', payload: this.db.players });
-            this.showNotification('Jugador actualizado.', 'success');
-        } catch(e) { this.showNotification('Error al guardar. Revirtiendo...', 'error'); this.db.players = originalPlayers; this.renderAll(); }
-    },
-
+    async updatePlayer(updatedPlayer) { const originalPlayers = JSON.parse(JSON.stringify(this.db.players)); const playerIndex = this.db.players.findIndex(p => p.id === updatedPlayer.id); if (playerIndex > -1) { this.db.players[playerIndex] = updatedPlayer; this.renderAll(); } try { await this.sendData('/api/data', 'PUT', { type: 'players', payload: this.db.players }); this.showNotification('Jugador actualizado.', 'success'); const item = document.querySelector(`.staff-list-item[data-id="${updatedPlayer.id}"]`); if (item) { item.classList.add('is-saving'); setTimeout(() => item.classList.remove('is-saving'), 800); } } catch(e) { this.showNotification('Error al guardar.', 'error'); this.db.players = originalPlayers; this.renderAll(); } },
+    
+    // --- Funciones de Utilidad ---
     isNumberTaken(number, excludePlayerId = null) { if (number === null || number === 0 || isNaN(number)) return false; return this.db.players.some(p => { if (p.id === excludePlayerId) return false; return p.number_current === number || p.number_new === number; }); },
     getSelectHTML(id, options, selectedValue = '') { return `<select id="${id}">${options.map(opt => `<option value="${opt}" ${opt === selectedValue ? 'selected' : ''}>${opt}</option>`).join('')}</select>`; },
     renderModal(contentHTML, isLarge = false, customClass = '') { this.elements.modalContainer.innerHTML = `<div class="modal-overlay"><div class="modal-content ${isLarge ? 'large' : ''} ${customClass}"><button class="close-btn">&times;</button>${contentHTML}</div></div>`; const overlay = this.elements.modalContainer.querySelector('.modal-overlay'); setTimeout(() => overlay.classList.add('show'), 10); overlay.addEventListener('click', e => { if (e.target === overlay || e.target.closest('.close-btn')) this.closeModal(); }); },
     closeModal() { const overlay = this.elements.modalContainer.querySelector('.modal-overlay'); if (overlay) { overlay.classList.remove('show'); overlay.addEventListener('transitionend', () => overlay.remove(), { once: true }); } },
-    showNotification(message, type = 'info') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = message; let timeoutId; const dismiss = () => { if (!el.parentElement) return; el.classList.add('hiding'); clearTimeout(timeoutId); el.addEventListener('transitionend', () => el.remove(), { once: true }); }; el.addEventListener('click', dismiss); timeoutId = setTimeout(dismiss, 120000); this.elements.notificationContainer.appendChild(el); },
+    showNotification(message, type = 'info') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = message; let timeoutId; const dismiss = () => { if (!el.parentElement) return; el.classList.add('hiding'); clearTimeout(timeoutId); el.addEventListener('transitionend', () => el.remove(), { once: true }); }; el.addEventListener('click', dismiss); timeoutId = setTimeout(dismiss, 5000); this.elements.notificationContainer.appendChild(el); },
     setCookie(name, value, days) { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days*24*60*60*1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/"; },
     getCookie(name) { const nameEQ = name + "="; const ca = document.cookie.split(';'); for(let i=0;i < ca.length;i++) { let c = ca[i]; while (c.charAt(0)==' ') c = c.substring(1,c.length); if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length); } return null; },
     eraseCookie(name) { document.cookie = name+'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'; }
