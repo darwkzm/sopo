@@ -1,6 +1,6 @@
 {
-  "name": "newells-interactive-hub",
-  "version": "4.0.0",
+  "name": "newells-hub-final",
+  "version": "6.0.0",
   "dependencies": {
     "@vercel/blob": "^0.23.2"
   }
